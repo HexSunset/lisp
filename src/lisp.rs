@@ -33,30 +33,6 @@ impl std::fmt::Display for Value {
     }
 }
 
-pub fn sym(s: &str) -> Value {
-    if s == "nil" {
-        Value::Nil
-    } else {
-        Value::Symbol(s.to_string())
-    }
-}
-
-pub fn txt(t: &str) -> Value {
-    Value::Text(t.to_string())
-}
-
-pub fn chr(c: char) -> Value {
-    Value::Character(c)
-}
-
-pub fn num<F: Into<f64>>(n: F) -> Value {
-    Value::Number(n.into())
-}
-
-pub fn nil() -> Value {
-    Value::Nil
-}
-
 #[derive(Clone)]
 pub struct Cons {
     car: Box<Value>,
