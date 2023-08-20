@@ -36,7 +36,7 @@ impl std::fmt::Display for Value {
 #[derive(Clone)]
 pub struct Cons {
     car: Box<Value>,
-    cdr: Box<Value>,
+    cdr: Box<Value>, // TODO: This should technically be a Option<Box<Value>> so we don't allocate a nil value.
 }
 
 pub fn cons(car: Value, cdr: Value) -> Value {
