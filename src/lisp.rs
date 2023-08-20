@@ -1,4 +1,3 @@
-
 #[derive(Clone)]
 pub enum Value {
     Symbol(String),
@@ -19,8 +18,8 @@ impl std::fmt::Display for Value {
             Number(n) => write!(f, "{}", n),
             Nil => write!(f, "nil"),
             Cons(c) => {
-                if is_list(self.clone()) {
-                    let elems = list_to_vec(self.clone());
+                if self.is_list() {
+                    let elems: Vec<Value> = Vec::try_from(self.clone()).unwrap();
                     let s: Vec<String> = elems.iter().map(|x| format!("{}", x)).collect();
                     let s: String = s.join(" ");
 
@@ -46,50 +45,64 @@ pub fn cons(car: Value, cdr: Value) -> Value {
     Value::Cons(Cons { car, cdr })
 }
 
-pub fn slice_to_list(items: &[Value]) -> Value {
-    let mut list = Value::Nil;
+impl From<&[Value]> for Value {
+    fn from(items: &[Value]) -> Value {
+        let mut list = Value::Nil;
 
-    let mut items = items.to_owned();
-    items.reverse();
+        let mut items = items.to_owned();
+        items.reverse();
 
-    for item in items {
-        list = cons(item, list);
-    }
-
-    return list;
-}
-
-pub fn is_list(val: Value) -> bool {
-    match val {
-        Value::Cons(cons) => {
-            if let Value::Cons(_) = *cons.cdr {
-                true && is_list(*cons.cdr)
-            } else if let Value::Nil = *cons.cdr {
-                true
-            } else {
-                false
-            }
+        for item in items {
+            list = cons(item, list);
         }
-        _ => false,
+
+        return list;
     }
 }
 
-pub fn list_to_vec(val: Value) -> Vec<Value> {
-    let mut list: Vec<Value> = Vec::new();
-
-    match val.clone() {
-        Value::Cons(cons) => match *(cons.cdr).clone() {
-            Value::Cons(_) => {
-                list.push(*cons.car);
-                for item in list_to_vec(*cons.cdr) {
-                    list.push(item);
+impl Value {
+    pub fn is_list(&self) -> bool {
+        match self {
+            Value::Cons(cons) => {
+                if let Value::Cons(_) = *cons.cdr {
+                    true && cons.cdr.is_list()
+                } else if let Value::Nil = *cons.cdr {
+                    true
+                } else {
+                    false
                 }
             }
-            Value::Nil => list.push(*cons.car),
-            _ => list.push(val),
-        },
-        _ => list.push(val),
+            _ => false,
+        }
     }
+}
 
-    list
+impl TryFrom<Value> for Vec<Value> {
+    type Error = &'static str;
+
+    fn try_from(val: Value) -> Result<Self, Self::Error> {
+        if !val.is_list() {
+            Err("Value is not a list")
+        } else {
+            let mut list: Vec<Value> = Vec::new();
+
+            match val.clone() {
+                Value::Cons(cons) => match *(cons.cdr).clone() {
+                    Value::Cons(_) => {
+                        list.push(*cons.car);
+                        if let Ok(cdr_list) = Vec::try_from(*cons.cdr) {
+                            for item in cdr_list {
+                                list.push(item);
+                            }
+                        }
+                    }
+                    Value::Nil => list.push(*cons.car),
+                    _ => list.push(val),
+                },
+                _ => list.push(val),
+            }
+
+            Ok(list)
+        }
+    }
 }
