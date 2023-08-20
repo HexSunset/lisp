@@ -38,13 +38,6 @@ pub struct Cons {
     cdr: Box<Value>, // TODO: This should technically be a Option<Box<Value>> so we don't allocate a nil value.
 }
 
-pub fn cons(car: Value, cdr: Value) -> Value {
-    let car = Box::new(car);
-    let cdr = Box::new(cdr);
-
-    Value::Cons(Cons { car, cdr })
-}
-
 impl From<&[Value]> for Value {
     fn from(items: &[Value]) -> Value {
         let mut list = Value::Nil;
@@ -53,7 +46,7 @@ impl From<&[Value]> for Value {
         items.reverse();
 
         for item in items {
-            list = cons(item, list);
+            list = Value::cons(item, list);
         }
 
         return list;
@@ -74,6 +67,13 @@ impl Value {
             }
             _ => false,
         }
+    }
+
+    pub fn cons(car: Value, cdr: Value) -> Value {
+        let car = Box::new(car);
+        let cdr = Box::new(cdr);
+
+        Value::Cons(Cons { car, cdr })
     }
 }
 
