@@ -2,7 +2,6 @@
 pub enum Value {
     Symbol(String),
     Text(String),
-    Character(char),
     Number(f64),
     Cons(Cons),
     Nil,
@@ -14,7 +13,6 @@ impl std::fmt::Display for Value {
         match self.clone() {
             Symbol(s) => write!(f, "{}", s),
             Text(s) => write!(f, "{:?}", s),
-            Character(c) => write!(f, "{:?}", c),
             Number(n) => write!(f, "{}", n),
             Nil => write!(f, "nil"),
             Cons(c) => {
