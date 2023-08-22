@@ -195,6 +195,10 @@ impl Scanner {
     }
 }
 
+pub fn is_symbolic(c: char) -> bool {
+    !"',`()\\\"".contains(c) && !c.is_whitespace()
+}
+
 use super::Value;
 
 #[derive(Debug)]
@@ -227,6 +231,9 @@ pub enum Token {
     Number(f64),
     Symbol(String),
     String(String),
+    Quote,
+    Quasiquote,
+    Unquote,
 }
 
 pub fn tokenize(expression: &str) -> Result<Vec<Token>, (LispParseError, Location)> {
@@ -258,8 +265,8 @@ pub fn tokenize(expression: &str) -> Result<Vec<Token>, (LispParseError, Locatio
             } else {
                 return Err((LispParseError::TrailingGarbage, scanner.loc()));
             }
-        } else if scanner.next_matches(|x| x.is_alphabetic()) {
-            let name = scanner.take_while(|x| x.is_alphanumeric()).unwrap();
+        } else if scanner.next_matches(|x| is_symbolic(x)) {
+            let name = scanner.take_while(|x| is_symbolic(x)).unwrap();
             tokens.push(Token::Symbol(name));
         } else if scanner.take('"').is_some() {
             let first_double_quote = scanner.index() - 1; // we consumed the character so need to backtrack
@@ -274,6 +281,12 @@ pub fn tokenize(expression: &str) -> Result<Vec<Token>, (LispParseError, Locatio
             }
 
             tokens.push(Token::String(text));
+        } else if scanner.take('\'').is_some() {
+            tokens.push(Token::Quote);
+        } else if scanner.take('`').is_some() {
+            tokens.push(Token::Quasiquote);
+        } else if scanner.take(',').is_some() {
+            tokens.push(Token::Unquote);
         } else if scanner.next_matches(|x| x.is_whitespace()) {
             let _ = scanner.take_while(|x| x.is_whitespace());
         } else {
