@@ -199,8 +199,6 @@ pub fn is_symbolic(c: char) -> bool {
     !"',`()\\\"".contains(c) && !c.is_whitespace()
 }
 
-use super::Value;
-
 #[derive(Debug)]
 pub struct Location(usize, usize);
 
