@@ -47,22 +47,18 @@ impl From<&[Value]> for Value {
             list = Value::cons(item, list);
         }
 
-        return list;
+        list
     }
 }
 
 impl Value {
     pub fn is_list(&self) -> bool {
         match self {
-            Value::Cons(cons) => {
-                if let Value::Cons(_) = *cons.cdr {
-                    true && cons.cdr.is_list()
-                } else if let Value::Nil = *cons.cdr {
-                    true
-                } else {
-                    false
-                }
-            }
+            Value::Cons(cons) => match *cons.cdr {
+                Value::Cons(_) => cons.cdr.is_list(),
+                Value::Nil => true,
+                _ => false,
+            },
             _ => false,
         }
     }
