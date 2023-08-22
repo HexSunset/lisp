@@ -1,7 +1,7 @@
 #[derive(Clone)]
 pub enum Value {
     Symbol(String),
-    Text(String),
+    String(String),
     Number(f64),
     Cons(Cons),
     Nil,
@@ -9,13 +9,12 @@ pub enum Value {
 
 impl std::fmt::Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        use Value::*;
         match self.clone() {
-            Symbol(s) => write!(f, "{}", s),
-            Text(s) => write!(f, "{:?}", s),
-            Number(n) => write!(f, "{}", n),
-            Nil => write!(f, "nil"),
-            Cons(c) => {
+            Value::Symbol(s) => write!(f, "{}", s),
+            Value::String(s) => write!(f, "{:?}", s),
+            Value::Number(n) => write!(f, "{}", n),
+            Value::Nil => write!(f, "nil"),
+            Value::Cons(c) => {
                 if self.is_list() {
                     let elems: Vec<Value> = Vec::try_from(self.clone()).unwrap();
                     let s: Vec<String> = elems.iter().map(|x| format!("{}", x)).collect();
