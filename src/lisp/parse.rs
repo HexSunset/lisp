@@ -306,6 +306,7 @@ pub fn tokenize(expression: &str) -> Result<Vec<Token>, (LispParseError, Locatio
     }
 }
 
+// TODO: make a more verbose program type that includes filename and stuff
 pub fn tokenize_or_print_error(expression: &str) -> Option<Vec<Token>> {
     match tokenize(expression) {
         Ok(tokens) => Some(tokens),
@@ -319,7 +320,13 @@ pub fn tokenize_or_print_error(expression: &str) -> Option<Vec<Token>> {
             };
 
             for number in min_line..loc.0 {
-                eprintln!("{}", expression.lines().nth(number).unwrap());
+                eprintln!("{} | {}", number + 1, expression.lines().nth(number).unwrap());
+            }
+
+	    // go past the padding with line numbers and stuff
+	    let padding_len = format!("{} | ", loc.0).len();
+	    for _ in 0..padding_len {
+                eprint!(" ");
             }
 
             for _ in 0..(loc.1 - 1) {
