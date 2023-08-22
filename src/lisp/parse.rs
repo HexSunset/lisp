@@ -272,7 +272,7 @@ pub fn tokenize(expression: &str) -> Result<Vec<Token>, (LispParseError, Locatio
             tokens.push(Token::Symbol(name));
         } else if scanner.take('"').is_some() {
             let first_double_quote = scanner.index() - 1; // we consumed the character so need to backtrack
-            let text = scanner.take_until(|x| x == '"').unwrap();
+            let text = scanner.take_until(|x| x == '"' || x == '\n').unwrap(); // don't allow multiline strings like this.
             if scanner.next_is('"') {
                 scanner.skip(1);
             } else {
