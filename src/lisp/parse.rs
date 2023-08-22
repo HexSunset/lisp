@@ -317,8 +317,9 @@ pub fn tokenize_or_print_error(expression: &str) -> Option<Vec<Token>> {
                     0
                 }
             };
-            for (_, line) in (min_line..loc.0).zip(expression.lines()) {
-                eprintln!("{}", line);
+
+            for number in min_line..loc.0 {
+                eprintln!("{}", expression.lines().nth(number).unwrap());
             }
 
             for _ in 0..(loc.1 - 1) {
