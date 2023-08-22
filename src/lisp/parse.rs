@@ -242,7 +242,9 @@ pub fn tokenize(expression: &str) -> Result<Vec<Token>, (LispParseError, Locatio
     let mut tokens: Vec<Token> = Vec::new();
 
     while scanner.not_empty() {
-        if scanner.take('(').is_some() {
+	if scanner.take(';').is_some() {
+	    scanner.take_until(|x| x == '\n');
+	} else if scanner.take('(').is_some() {
             tokens.push(Token::OpenParen);
         } else if scanner.take(')').is_some() {
             tokens.push(Token::CloseParen);
