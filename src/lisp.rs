@@ -1,3 +1,5 @@
+pub mod parse;
+
 #[derive(Clone)]
 pub enum Value {
     Symbol(String),
