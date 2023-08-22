@@ -269,7 +269,14 @@ pub fn tokenize(expression: &str) -> Result<Vec<Token>, (LispParseError, Locatio
             }
         } else if scanner.next_matches(|x| is_symbolic(x)) {
             let name = scanner.take_while(|x| is_symbolic(x)).unwrap();
-            tokens.push(Token::Symbol(name));
+	    if scanner.next_matches(|x| x.is_whitespace()) || scanner.next_is_one_of("()") || scanner.is_empty() {
+		tokens.push(Token::Symbol(name));
+	    } else {
+		return Err((
+		    LispParseError::TrailingGarbage,
+		    scanner.loc()
+		));
+	    }
         } else if scanner.take('"').is_some() {
             let first_double_quote = scanner.index() - 1; // we consumed the character so need to backtrack
             let text = scanner.take_until(|x| x == '"' || x == '\n').unwrap(); // don't allow multiline strings like this.
