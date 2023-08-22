@@ -308,7 +308,13 @@ pub fn tokenize_or_print_error(expression: &str) -> Option<Vec<Token>> {
     match tokenize(expression) {
         Ok(tokens) => Some(tokens),
         Err((e, loc)) => {
-	    let min_line = std::cmp::min(0, loc.0 - 3);
+            let min_line = {
+                if loc.0 >= 3 {
+                    loc.0 - 3
+                } else {
+                    0
+                }
+            };
             for (_, line) in (min_line..loc.0).zip(expression.lines()) {
                 eprintln!("{}", line);
             }
