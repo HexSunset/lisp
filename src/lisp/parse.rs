@@ -239,13 +239,23 @@ pub fn tokenize(expression: &str) -> Result<Vec<Token>, (LispParseError, Locatio
 
     let mut tokens: Vec<Token> = Vec::new();
 
+    // list of indexes of unmatched parentheses
+    let mut unmatched_parens: Vec<usize> = Vec::new();
+
     while scanner.not_empty() {
         if scanner.take(';').is_some() {
             scanner.take_until(|x| x == '\n');
         } else if scanner.take('(').is_some() {
             tokens.push(Token::OpenParen);
-        } else if scanner.take(')').is_some() {
-            tokens.push(Token::CloseParen);
+            unmatched_parens.push(scanner.index() - 1);
+        } else if scanner.next_is(')') {
+            if unmatched_parens.len() > 0 {
+                unmatched_parens.pop();
+                tokens.push(Token::CloseParen);
+                let _ = scanner.next();
+            } else {
+                return Err((LispParseError::UnMatched(')'), scanner.loc()));
+            }
         } else if scanner.next_matches(|x| x.is_numeric()) {
             let mut num = scanner.take_while(|x| x.is_numeric()).unwrap();
             if scanner.take('.').is_some() {
@@ -302,6 +312,13 @@ pub fn tokenize(expression: &str) -> Result<Vec<Token>, (LispParseError, Locatio
                 scanner.loc(),
             ));
         }
+    }
+
+    if unmatched_parens.len() > 0 {
+        return Err((
+            LispParseError::UnMatched('('),
+            scanner.line_col(unmatched_parens.pop().unwrap()),
+        ));
     }
 
     if tokens.is_empty() {
