@@ -1,5 +1,6 @@
 pub struct Scanner {
     cursor: usize,
+    loc: Location,
     characters: Vec<char>,
 }
 
@@ -7,6 +8,7 @@ impl Scanner {
     pub fn new(s: &str) -> Scanner {
         Scanner {
             cursor: 0,
+            loc: Location { line: 0, col: 0 },
             characters: s.chars().collect(),
         }
     }
@@ -16,24 +18,7 @@ impl Scanner {
     }
 
     pub fn loc(&self) -> Location {
-        self.line_col(self.index())
-    }
-
-    pub fn line_col(&self, index: usize) -> Location {
-        let mut line: usize = 1;
-        let mut col: usize = 1;
-
-        for (_, c) in (0..index).zip(&self.characters) {
-            match *c {
-                '\n' => {
-                    line += 1;
-                    col = 1;
-                }
-                _ => col += 1,
-            }
-        }
-
-        Location(line, col)
+        self.loc.clone()
     }
 
     pub fn is_empty(&self) -> bool {
@@ -54,6 +39,14 @@ impl Scanner {
         } else {
             let c = *self.characters.get(self.cursor).unwrap();
             self.cursor += 1;
+
+            if c == '\n' {
+                self.loc.line += 1;
+                self.loc.col = 0;
+            } else {
+                self.loc.col += 1;
+            }
+
             Some(c)
         }
     }
@@ -121,7 +114,7 @@ impl Scanner {
         let mut out = String::new();
         while let Some(c) = self.peek() {
             if fun(c) {
-                self.cursor += 1;
+                self.next();
                 out.push(c);
             } else {
                 break;
@@ -191,12 +184,15 @@ pub fn is_symbolic(c: char) -> bool {
     !"',`()\\\"".contains(c) && !c.is_whitespace()
 }
 
-#[derive(Debug)]
-pub struct Location(usize, usize);
+#[derive(Debug, Copy, Clone)]
+pub struct Location {
+    line: usize,
+    col: usize,
+}
 
 impl std::fmt::Display for Location {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "{}:{}", self.0, self.1)
+        write!(f, "{}:{}", self.line, self.col)
     }
 }
 
