@@ -91,15 +91,7 @@ impl Scanner {
     }
 
     pub fn next_is(&self, c: char) -> bool {
-        if self.is_empty() {
-            false
-        } else {
-            if self.peek() == Some(c) {
-                true
-            } else {
-                false
-            }
-        }
+        self.peek() == Some(c)
     }
 
     pub fn next_is_one_of(&self, chars: &str) -> bool {
@@ -109,7 +101,7 @@ impl Scanner {
             }
         }
 
-        return false;
+        false
     }
 
     pub fn next_matches<F>(&self, fun: F) -> bool
@@ -249,25 +241,25 @@ pub fn tokenize(expression: &str) -> Result<Vec<Token>, (LispParseError, Locatio
             tokens.push(Token::OpenParen);
             unmatched_parens.push(scanner.index() - 1);
         } else if scanner.next_is(')') {
-            if unmatched_parens.len() > 0 {
+            if !unmatched_parens.is_empty() {
                 unmatched_parens.pop();
                 tokens.push(Token::CloseParen);
                 let _ = scanner.next();
             } else {
                 return Err((LispParseError::UnMatched(')'), scanner.loc()));
             }
-        } else if scanner.next_matches(|x| x.is_numeric()) {
-            let mut num = scanner.take_while(|x| x.is_numeric()).unwrap();
+        } else if scanner.next_matches(char::is_numeric) {
+            let mut num = scanner.take_while(char::is_numeric).unwrap();
             if scanner.take('.').is_some() {
                 num.push('.');
-                num.push_str(&scanner.take_while(|x| x.is_numeric()).unwrap());
-                if !(scanner.next_matches(|x| x.is_whitespace()) || scanner.next_is_one_of("()")) {
+                num.push_str(&scanner.take_while(char::is_numeric).unwrap());
+                if !(scanner.next_matches(char::is_whitespace) || scanner.next_is_one_of("()")) {
                     return Err((LispParseError::TrailingGarbage, scanner.loc()));
                 }
                 let token = Token::Number(num.parse().unwrap());
                 tokens.push(token);
             } else if scanner.is_empty()
-                || scanner.next_matches(|x| x.is_whitespace())
+                || scanner.next_matches(char::is_whitespace)
                 || scanner.next_is_one_of("()")
             {
                 let token = Token::Number(num.parse().unwrap());
@@ -275,9 +267,9 @@ pub fn tokenize(expression: &str) -> Result<Vec<Token>, (LispParseError, Locatio
             } else {
                 return Err((LispParseError::TrailingGarbage, scanner.loc()));
             }
-        } else if scanner.next_matches(|x| is_symbolic(x)) {
-            let name = scanner.take_while(|x| is_symbolic(x)).unwrap();
-            if scanner.next_matches(|x| x.is_whitespace())
+        } else if scanner.next_matches(is_symbolic) {
+            let name = scanner.take_while(is_symbolic).unwrap();
+            if scanner.next_matches(char::is_whitespace)
                 || scanner.next_is_one_of("()")
                 || scanner.is_empty()
             {
@@ -304,8 +296,8 @@ pub fn tokenize(expression: &str) -> Result<Vec<Token>, (LispParseError, Locatio
             tokens.push(Token::Quasiquote);
         } else if scanner.take(',').is_some() {
             tokens.push(Token::Unquote);
-        } else if scanner.next_matches(|x| x.is_whitespace()) {
-            let _ = scanner.take_while(|x| x.is_whitespace());
+        } else if scanner.next_matches(char::is_whitespace) {
+            let _ = scanner.take_while(char::is_whitespace);
         } else {
             return Err((
                 LispParseError::UnKnownChar(scanner.peek().unwrap()),
@@ -314,7 +306,7 @@ pub fn tokenize(expression: &str) -> Result<Vec<Token>, (LispParseError, Locatio
         }
     }
 
-    if unmatched_parens.len() > 0 {
+    if !unmatched_parens.is_empty() {
         return Err((
             LispParseError::UnMatched('('),
             scanner.line_col(unmatched_parens.pop().unwrap()),
