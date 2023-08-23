@@ -1,10 +1,28 @@
+use std::io::Read;
+
 mod lisp;
 
-use lisp::*;
-
 fn main() {
-    let numbers = [Value::Number(1.0), Value::Number(2.0), Value::Number(3.0)];
-    let l = Value::from(&numbers[..]);
+    let mut args = std::env::args();
+    if args.len() != 2 {
+        eprintln!("USAGE: {} FILENAME", args.nth(0).unwrap());
+        std::process::exit(1);
+    }
 
-    println!("{}", l);
+    let fname = std::env::args().nth(1).unwrap();
+
+    let mut file = std::fs::File::open(&fname).unwrap();
+
+    let mut program = String::new();
+    file.read_to_string(&mut program).unwrap();
+
+    let tokens = match lisp::parse::tokenize_or_print_error(&program) {
+        Some(t) => t,
+        None => std::process::exit(1),
+    };
+
+    println!("{}:", fname);
+    for token in tokens {
+        println!("{} {:?}", token.loc, token.inner);
+    }
 }
