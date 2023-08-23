@@ -211,7 +211,7 @@ pub enum LispParseError {
 }
 
 #[derive(Debug)]
-pub enum Token {
+pub enum TokenType {
     OpenParen,
     CloseParen,
     Number(f64),
@@ -222,29 +222,47 @@ pub enum Token {
     Unquote,
 }
 
+pub struct Token {
+    pub loc: Location,
+    pub inner: TokenType,
+}
+
 pub fn tokenize(expression: &str) -> Result<Vec<Token>, (LispParseError, Location)> {
     let mut scanner = Scanner::new(expression);
 
     let mut tokens: Vec<Token> = Vec::new();
 
     // list of indexes of unmatched parentheses
-    let mut unmatched_parens: Vec<usize> = Vec::new();
+    let mut unmatched_parens: Vec<Location> = Vec::new();
 
     while scanner.not_empty() {
         if scanner.take(';').is_some() {
             scanner.take_until(|x| x == '\n');
-        } else if scanner.take('(').is_some() {
-            tokens.push(Token::OpenParen);
-            unmatched_parens.push(scanner.index() - 1);
+        } else if scanner.next_is('(') {
+            let token = Token {
+                loc: scanner.loc(),
+                inner: TokenType::OpenParen,
+            };
+
+            let _ = scanner.next();
+
+            unmatched_parens.push(token.loc);
+            tokens.push(token);
         } else if scanner.next_is(')') {
             if !unmatched_parens.is_empty() {
                 unmatched_parens.pop();
-                tokens.push(Token::CloseParen);
+                let token = Token {
+                    loc: scanner.loc(),
+                    inner: TokenType::CloseParen,
+                };
+
+                tokens.push(token);
                 let _ = scanner.next();
             } else {
                 return Err((LispParseError::UnMatched(')'), scanner.loc()));
             }
         } else if scanner.next_matches(char::is_numeric) {
+            let token_start = scanner.loc();
             let mut num = scanner.take_while(char::is_numeric).unwrap();
             if scanner.take('.').is_some() {
                 num.push('.');
@@ -252,46 +270,84 @@ pub fn tokenize(expression: &str) -> Result<Vec<Token>, (LispParseError, Locatio
                 if !(scanner.next_matches(char::is_whitespace) || scanner.next_is_one_of("()")) {
                     return Err((LispParseError::TrailingGarbage, scanner.loc()));
                 }
-                let token = Token::Number(num.parse().unwrap());
+                let token = Token {
+                    loc: token_start,
+                    inner: TokenType::Number(num.parse().unwrap()),
+                };
+
                 tokens.push(token);
             } else if scanner.is_empty()
                 || scanner.next_matches(char::is_whitespace)
                 || scanner.next_is_one_of("()")
             {
-                let token = Token::Number(num.parse().unwrap());
+                let token = Token {
+                    loc: token_start,
+                    inner: TokenType::Number(num.parse().unwrap()),
+                };
+
                 tokens.push(token);
             } else {
                 return Err((LispParseError::TrailingGarbage, scanner.loc()));
             }
         } else if scanner.next_matches(is_symbolic) {
+            let token_start = scanner.loc();
             let name = scanner.take_while(is_symbolic).unwrap();
             if scanner.next_matches(char::is_whitespace)
                 || scanner.next_is_one_of("()")
                 || scanner.is_empty()
             {
-                tokens.push(Token::Symbol(name));
+                let token = Token {
+                    loc: token_start,
+                    inner: TokenType::Symbol(name),
+                };
+
+                tokens.push(token);
             } else {
                 return Err((LispParseError::TrailingGarbage, scanner.loc()));
             }
-        } else if scanner.take('"').is_some() {
-            let first_double_quote = scanner.index() - 1; // we consumed the character so need to backtrack
+        } else if scanner.next_is('"') {
+            let first_double_quote = scanner.loc(); // we consumed the character so need to backtrack
+            let _ = scanner.next();
             let text = scanner.take_until(|x| x == '"' || x == '\n').unwrap(); // don't allow multiline strings like this.
             if scanner.next_is('"') {
-                scanner.skip(1);
+                scanner.next();
             } else {
-                return Err((
-                    LispParseError::UnMatched('"'),
-                    scanner.line_col(first_double_quote),
-                ));
+                return Err((LispParseError::UnMatched('"'), first_double_quote));
             }
 
-            tokens.push(Token::String(text));
-        } else if scanner.take('\'').is_some() {
-            tokens.push(Token::Quote);
-        } else if scanner.take('`').is_some() {
-            tokens.push(Token::Quasiquote);
-        } else if scanner.take(',').is_some() {
-            tokens.push(Token::Unquote);
+            let token = Token {
+                loc: first_double_quote,
+                inner: TokenType::String(text),
+            };
+
+            tokens.push(token);
+        } else if scanner.next_is('\'') {
+            let token_loc = scanner.loc();
+            let _ = scanner.next();
+            let token = Token {
+                loc: token_loc,
+                inner: TokenType::Quote,
+            };
+
+            tokens.push(token);
+        } else if scanner.next_is('`') {
+            let token_loc = scanner.loc();
+            let _ = scanner.next();
+            let token = Token {
+                loc: token_loc,
+                inner: TokenType::Quasiquote,
+            };
+
+            tokens.push(token);
+        } else if scanner.next_is(',') {
+            let token_loc = scanner.loc();
+            let _ = scanner.next();
+            let token = Token {
+                loc: token_loc,
+                inner: TokenType::Unquote,
+            };
+
+            tokens.push(token);
         } else if scanner.next_matches(char::is_whitespace) {
             let _ = scanner.take_while(char::is_whitespace);
         } else {
@@ -305,7 +361,7 @@ pub fn tokenize(expression: &str) -> Result<Vec<Token>, (LispParseError, Locatio
     if !unmatched_parens.is_empty() {
         return Err((
             LispParseError::UnMatched('('),
-            scanner.line_col(unmatched_parens.pop().unwrap()),
+            unmatched_parens.pop().unwrap(),
         ));
     }
 
@@ -322,14 +378,14 @@ pub fn tokenize_or_print_error(expression: &str) -> Option<Vec<Token>> {
         Ok(tokens) => Some(tokens),
         Err((e, loc)) => {
             let min_line = {
-                if loc.0 >= 3 {
-                    loc.0 - 3
+                if loc.line >= 3 {
+                    loc.line - 3
                 } else {
                     0
                 }
             };
 
-            for number in min_line..loc.0 {
+            for number in min_line..=loc.line {
                 eprintln!(
                     "{} | {}",
                     number + 1,
@@ -338,18 +394,23 @@ pub fn tokenize_or_print_error(expression: &str) -> Option<Vec<Token>> {
             }
 
             // go past the padding with line numbers and stuff
-            let padding_len = format!("{} | ", loc.0).len();
+            let padding_len = format!("{} | ", loc.line).len();
             for _ in 0..padding_len {
                 eprint!(" ");
             }
 
-            for _ in 0..(loc.1 - 1) {
+            for _ in 0..loc.col {
                 eprint!(" ");
             }
 
             eprintln!("^");
 
-            eprintln!("error: {} on line {} column {}", e, loc.0, loc.1);
+            eprintln!(
+                "error: {} on line {} column {}",
+                e,
+                loc.line + 1,
+                loc.col + 1
+            );
 
             None
         }
