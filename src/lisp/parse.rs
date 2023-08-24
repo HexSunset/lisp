@@ -18,15 +18,15 @@ impl Scanner {
     }
 
     pub fn loc(&self) -> Location {
-        self.loc.clone()
+        self.loc
     }
 
     pub fn is_empty(&self) -> bool {
-        self.cursor == self.characters.len()
+        self.len() == 0
     }
 
     pub fn not_empty(&self) -> bool {
-        self.cursor != self.characters.len()
+        self.len() > 0
     }
 
     pub fn len(&self) -> usize {
