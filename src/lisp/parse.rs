@@ -199,7 +199,7 @@ impl std::fmt::Display for Location {
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-pub enum LispParseError {
+pub enum LispLexingError {
     #[error("trailing garbage")]
     TrailingGarbage,
     #[error("empty program")]
@@ -227,7 +227,7 @@ pub struct Token {
     pub inner: TokenType,
 }
 
-pub fn tokenize(expression: &str) -> Result<Vec<Token>, (LispParseError, Location)> {
+pub fn tokenize(expression: &str) -> Result<Vec<Token>, (LispLexingError, Location)> {
     let mut scanner = Scanner::new(expression);
 
     let mut tokens: Vec<Token> = Vec::new();
@@ -259,7 +259,7 @@ pub fn tokenize(expression: &str) -> Result<Vec<Token>, (LispParseError, Locatio
                 tokens.push(token);
                 let _ = scanner.next();
             } else {
-                return Err((LispParseError::UnMatched(')'), scanner.loc()));
+                return Err((LispLexingError::UnMatched(')'), scanner.loc()));
             }
         } else if scanner.next_matches(char::is_numeric) {
             let token_start = scanner.loc();
@@ -268,7 +268,7 @@ pub fn tokenize(expression: &str) -> Result<Vec<Token>, (LispParseError, Locatio
                 num.push('.');
                 num.push_str(&scanner.take_while(char::is_numeric).unwrap());
                 if !(scanner.next_matches(char::is_whitespace) || scanner.next_is_one_of("()")) {
-                    return Err((LispParseError::TrailingGarbage, scanner.loc()));
+                    return Err((LispLexingError::TrailingGarbage, scanner.loc()));
                 }
                 let token = Token {
                     loc: token_start,
@@ -287,7 +287,7 @@ pub fn tokenize(expression: &str) -> Result<Vec<Token>, (LispParseError, Locatio
 
                 tokens.push(token);
             } else {
-                return Err((LispParseError::TrailingGarbage, scanner.loc()));
+                return Err((LispLexingError::TrailingGarbage, scanner.loc()));
             }
         } else if scanner.next_matches(is_symbolic) {
             let token_start = scanner.loc();
@@ -303,7 +303,7 @@ pub fn tokenize(expression: &str) -> Result<Vec<Token>, (LispParseError, Locatio
 
                 tokens.push(token);
             } else {
-                return Err((LispParseError::TrailingGarbage, scanner.loc()));
+                return Err((LispLexingError::TrailingGarbage, scanner.loc()));
             }
         } else if scanner.next_is('"') {
             let first_double_quote = scanner.loc(); // we consumed the character so need to backtrack
@@ -312,7 +312,7 @@ pub fn tokenize(expression: &str) -> Result<Vec<Token>, (LispParseError, Locatio
             if scanner.next_is('"') {
                 scanner.next();
             } else {
-                return Err((LispParseError::UnMatched('"'), first_double_quote));
+                return Err((LispLexingError::UnMatched('"'), first_double_quote));
             }
 
             let token = Token {
@@ -352,7 +352,7 @@ pub fn tokenize(expression: &str) -> Result<Vec<Token>, (LispParseError, Locatio
             let _ = scanner.take_while(char::is_whitespace);
         } else {
             return Err((
-                LispParseError::UnKnownChar(scanner.peek().unwrap()),
+                LispLexingError::UnKnownChar(scanner.peek().unwrap()),
                 scanner.loc(),
             ));
         }
@@ -360,13 +360,13 @@ pub fn tokenize(expression: &str) -> Result<Vec<Token>, (LispParseError, Locatio
 
     if !unmatched_parens.is_empty() {
         return Err((
-            LispParseError::UnMatched('('),
+            LispLexingError::UnMatched('('),
             unmatched_parens.pop().unwrap(),
         ));
     }
 
     if tokens.is_empty() {
-        Err((LispParseError::Empty, scanner.loc()))
+        Err((LispLexingError::Empty, scanner.loc()))
     } else {
         Ok(tokens)
     }
