@@ -91,5 +91,15 @@ impl Value {
 	out_val
     }
 }
+
+#[derive(Debug, Copy, Clone)]
+pub struct Location {
+    line: usize,
+    col: usize,
+}
+
+impl std::fmt::Display for Location {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "{}:{}", self.line, self.col)
     }
 }

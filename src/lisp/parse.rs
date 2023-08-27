@@ -1,3 +1,5 @@
+use super::Location;
+
 pub struct Scanner {
     cursor: usize,
     loc: Location,
@@ -182,18 +184,6 @@ impl Scanner {
 
 pub fn is_symbolic(c: char) -> bool {
     !"',`()\\\"".contains(c) && !c.is_whitespace()
-}
-
-#[derive(Debug, Copy, Clone)]
-pub struct Location {
-    line: usize,
-    col: usize,
-}
-
-impl std::fmt::Display for Location {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "{}:{}", self.line, self.col)
-    }
 }
 
 use thiserror::Error;
