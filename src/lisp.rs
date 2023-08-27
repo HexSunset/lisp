@@ -41,21 +41,6 @@ pub struct Cons {
     cdr: Box<Value>, // TODO: This should technically be a Option<Box<Value>> so we don't allocate a nil value.
 }
 
-impl From<&[Value]> for Value {
-    fn from(items: &[Value]) -> Value {
-        let mut list = Value::Nil;
-
-        let mut items = items.to_owned();
-        items.reverse();
-
-        for item in items {
-            list = Value::cons(item, list);
-        }
-
-        list
-    }
-}
-
 impl Value {
     pub fn is_list(&self) -> bool {
         match self {
@@ -68,40 +53,43 @@ impl Value {
         }
     }
 
+    pub fn list_to_vec(&self) -> Vec<Value> {
+        let mut elements = vec![];
+
+	let mut head = self.clone();
+
+	while let Value::List(c) = head.clone() {
+	    elements.push(*c.car);
+	    head = *c.cdr;
+	}
+
+        elements
+    }
+
     pub fn cons(car: Value, cdr: Value) -> Value {
         let car = Box::new(car);
         let cdr = Box::new(cdr);
 
-        Value::Cons(Cons { car, cdr })
+        if let Value::Nil = *cdr {
+            Value::List(Cons { car, cdr })
+        } else if cdr.is_list() {
+            Value::List(Cons { car, cdr })
+        } else {
+            Value::Pair(Cons { car, cdr })
+        }
+    }
+
+    pub fn vec_to_list(elements: Vec<Value>) -> Value {
+	let mut out_val = Value::Nil;
+	let mut elements = elements.clone();
+	elements.reverse();
+
+	for element in elements {
+	    out_val = Value::cons(element, out_val);
+	}
+
+	out_val
     }
 }
-
-impl TryFrom<Value> for Vec<Value> {
-    type Error = &'static str;
-
-    fn try_from(val: Value) -> Result<Self, Self::Error> {
-        if !val.is_list() {
-            Err("Value is not a list")
-        } else {
-            let mut list: Vec<Value> = Vec::new();
-
-            match val.clone() {
-                Value::Cons(cons) => match *(cons.cdr).clone() {
-                    Value::Cons(_) => {
-                        list.push(*cons.car);
-                        if let Ok(cdr_list) = Vec::try_from(*cons.cdr) {
-                            for item in cdr_list {
-                                list.push(item);
-                            }
-                        }
-                    }
-                    Value::Nil => list.push(*cons.car),
-                    _ => list.push(val),
-                },
-                _ => list.push(val),
-            }
-
-            Ok(list)
-        }
     }
 }
