@@ -5,7 +5,8 @@ pub enum Value {
     Symbol(String),
     String(String),
     Number(f64),
-    Cons(Cons),
+    Pair(Cons),
+    List(Cons),
     Nil,
 }
 
@@ -16,16 +17,19 @@ impl std::fmt::Display for Value {
             Value::String(s) => write!(f, "{:?}", s),
             Value::Number(n) => write!(f, "{}", n),
             Value::Nil => write!(f, "nil"),
-            Value::Cons(c) => {
-                if self.is_list() {
-                    let elems: Vec<Value> = Vec::try_from(self.clone()).unwrap();
-                    let s: Vec<String> = elems.iter().map(|x| format!("{}", x)).collect();
-                    let s: String = s.join(" ");
+            Value::List(c) => {
+                write!(f, "({}", c.car)?;
 
-                    write!(f, "({})", s)
-                } else {
-                    write!(f, "({} . {})", c.car, c.cdr)
+                let mut c = c.cdr;
+
+                while let Value::List(cons) = *c.clone() {
+                    write!(f, " {}", cons.car)?;
+                    c = cons.cdr;
                 }
+                write!(f, ")")
+            }
+            Value::Pair(c) => {
+                write!(f, "({} . {})", c.car, c.cdr)
             }
         }
     }
@@ -55,8 +59,8 @@ impl From<&[Value]> for Value {
 impl Value {
     pub fn is_list(&self) -> bool {
         match self {
-            Value::Cons(cons) => match *cons.cdr {
-                Value::Cons(_) => cons.cdr.is_list(),
+            Value::List(cons) => match *cons.cdr {
+                Value::List(_) => cons.cdr.is_list(),
                 Value::Nil => true,
                 _ => false,
             },
