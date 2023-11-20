@@ -208,6 +208,7 @@ pub enum TokenType {
     Symbol(String),
     String(String),
     Quote,
+    Dot,
     Quasiquote,
     Unquote,
 }
@@ -320,6 +321,15 @@ pub fn tokenize(expression: &str) -> Result<Vec<Token>, (LispLexingError, Locati
             };
 
             tokens.push(token);
+	} else if scanner.next_is('.') {
+	    let token_loc = scanner.loc();
+	    let _ = scanner.next();
+	    let token = Token {
+		loc: token_loc,
+		inner: TokenType::Dot,
+	    };
+
+	    tokens.push(token)
         } else if scanner.next_is('`') {
             let token_loc = scanner.loc();
             let _ = scanner.next();
