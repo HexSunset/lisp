@@ -16,7 +16,7 @@ fn main() {
     let mut program = String::new();
     file.read_to_string(&mut program).unwrap();
 
-    let tokens = match lisp::parse::tokenize_or_print_error(&program) {
+    let tokens = match lisp::token::tokenize_or_print_error(&program) {
         Some(t) => t,
         None => std::process::exit(1),
     };
