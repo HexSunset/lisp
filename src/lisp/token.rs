@@ -200,7 +200,7 @@ pub enum LispLexingError {
     UnMatched(char),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum TokenType {
     OpenParen,
     CloseParen,
@@ -213,6 +213,7 @@ pub enum TokenType {
     Unquote,
 }
 
+#[derive(Clone)]
 pub struct Token {
     pub loc: Location,
     pub inner: TokenType,
